@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Show My Current Location on Map</title>
+    <title>Employee Location Check</title>
 
     <!-- Leaflet CSS (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
@@ -11,14 +11,15 @@
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
         #map { height: 400px; width: 100%; margin-top: 10px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        #status { font-size: 18px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h2>My Current Location</h2>
-    <button onclick="getLocation()">Show My Location</button>
-    <p id="location-info">Latitude: - | Longitude: -</p>
+    <h2>Employee Location Verification</h2>
+    <button onclick="checkLocation()">Check My Location</button>
+    <p id="status">Status: Waiting for check...</p>
     <div id="map"></div>
 
     <!-- Leaflet JS (CDN) -->
@@ -27,38 +28,77 @@
     <script>
         let map;
 
-        function getLocation() {
+        // 🔹 Set your company location here (Latitude, Longitude)
+        const companyLat = 22.6708317;  // Example: Change this to your company latitude
+        const companyLon = 71.5723953;  // Example: Change this to your company longitude
+        const allowedDistance = 5; // 🔹 Allowable distance in meters (5m range)
+
+        function checkLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     function (position) {
-                        let lat = position.coords.latitude;
-                        let lon = position.coords.longitude;
-                        let accuracy = position.coords.accuracy; // Accuracy in meters
+                        let userLat = position.coords.latitude;
+                        let userLon = position.coords.longitude;
+                        let accuracy = position.coords.accuracy;
 
-                        document.getElementById("location-info").innerText =
-                            `Latitude: ${lat} | Longitude: ${lon} | Accuracy: ±${accuracy} meters`;
+                        let distance = getDistance(userLat, userLon, companyLat, companyLon);
 
+                        // Update map
                         if (!map) {
-                            map = L.map('map').setView([lat, lon], 16); // Zoom level 16 for accuracy
+                            map = L.map('map').setView([userLat, userLon], 18);
                             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                 attribution: '&copy; OpenStreetMap contributors'
                             }).addTo(map);
                         } else {
-                            map.setView([lat, lon], 16);
+                            map.setView([userLat, userLon], 18);
                         }
 
-                        L.marker([lat, lon]).addTo(map)
-                            .bindPopup(`📍 You are here! <br> Accuracy: ±${accuracy} meters`)
-                            .openPopup();
+                        // Clear existing markers
+                        map.eachLayer((layer) => {
+                            if (layer instanceof L.Marker) {
+                                map.removeLayer(layer);
+                            }
+                        });
+
+                        // Add markers for user and company
+                        L.marker([userLat, userLon]).addTo(map).bindPopup("📍 Your Location").openPopup();
+                        L.marker([companyLat, companyLon]).addTo(map).bindPopup("🏢 Company Location").openPopup();
+
+                        // Check if user is inside allowed area
+                        if (distance <= allowedDistance) {
+                            document.getElementById("status").innerText = "✅ You are ON current location.";
+                            document.getElementById("status").style.color = "green";
+                        } else {
+                            document.getElementById("status").innerText = "❌ You are NOT at the location.";
+                            document.getElementById("status").style.color = "red";
+                        }
                     },
                     function (error) {
                         alert("Error: " + error.message);
                     },
-                    { enableHighAccuracy: true } // Request high-accuracy GPS
+                    { enableHighAccuracy: true }
                 );
             } else {
                 alert("Geolocation is not supported by this browser.");
             }
+        }
+
+        // 🔹 Function to calculate distance (Haversine formula)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            function deg2rad(deg) {
+                return deg * (Math.PI / 180);
+            }
+
+            let R = 6371000; // Radius of Earth in meters
+            let dLat = deg2rad(lat2 - lat1);
+            let dLon = deg2rad(lon2 - lon1);
+
+            let a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance in meters
         }
     </script>
 
