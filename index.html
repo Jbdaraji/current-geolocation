@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Show My Current Location on Map</title>
+
+    <!-- Leaflet CSS (CDN) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        #map { height: 400px; width: 100%; margin-top: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>My Current Location</h2>
+    <button onclick="getLocation()">Show My Location</button>
+    <p id="location-info">Latitude: - | Longitude: -</p>
+    <div id="map"></div>
+
+    <!-- Leaflet JS (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+    <script>
+        let map;
+
+        function getLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        let lat = position.coords.latitude;
+                        let lon = position.coords.longitude;
+                        let accuracy = position.coords.accuracy; // Accuracy in meters
+
+                        document.getElementById("location-info").innerText =
+                            `Latitude: ${lat} | Longitude: ${lon} | Accuracy: ±${accuracy} meters`;
+
+                        if (!map) {
+                            map = L.map('map').setView([lat, lon], 16); // Zoom level 16 for accuracy
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '&copy; OpenStreetMap contributors'
+                            }).addTo(map);
+                        } else {
+                            map.setView([lat, lon], 16);
+                        }
+
+                        L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`📍 You are here! <br> Accuracy: ±${accuracy} meters`)
+                            .openPopup();
+                    },
+                    function (error) {
+                        alert("Error: " + error.message);
+                    },
+                    { enableHighAccuracy: true } // Request high-accuracy GPS
+                );
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+    </script>
+
+</body>
+</html>
